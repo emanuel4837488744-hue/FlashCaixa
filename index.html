@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flash Caixa | Sistema de Frente de Caixa Inteligente - Goiás e DF</title>
+    <meta name="description" content="Sistema de frente de caixa em VBA para pequenos comércios. Baixo custo, sem mensalidade, controle total do seu negócio. Atendimento em Goiás e Distrito Federal.">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- GSAP para animações -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        flash: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#518cff', // Cor principal das logos
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'shimmer': 'shimmer 2s linear infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        },
+                        shimmer: {
+                            '0%': { backgroundPosition: '-1000px 0' },
+                            '100%': { backgroundPosition: '1000px 0' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .glass-dark {
+            background: rgba(30, 58, 138, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .text-gradient {
+            background: linear-gradient(135deg, #518cff 0%, #1e40af 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .bg-mesh {
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(81, 140, 255, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(30, 64, 175, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(81, 140, 255, 0.15) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, rgba(30, 64, 175, 0.15) 0px, transparent 50%);
+        }
+        
+        .hover-lift {
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+        }
+        
+        .hover-lift:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px -15px rgba(81, 140, 255, 0.3);
+        }
+        
+        .whatsapp-float {
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        .counter-animation {
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .reveal-text {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        
+        .check-icon {
+            stroke-dasharray: 20;
+            stroke-dashoffset: 20;
+            animation: draw 0.5s ease forwards;
+        }
+        
+        @keyframes draw {
+            to { stroke-dashoffset: 0; }
+        }
+        
+        /* Efeito de brilho nos cards */
+        .card-shine {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card-shine::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: left 0.5s;
+        }
+        
+        .card-shine:hover::before {
+            left: 100%;
+        }
+    </style>
+</head>
+<body class="font-sans text-slate-800 bg-slate-50 overflow-x-hidden">
+
+    <!-- Progress Bar -->
+    <div class="fixed top-0 left-0 h-1 bg-flash-500 z-50 transition-all duration-300" id="progressBar" style="width: 0%"></div>
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-40 transition-all duration-300" id="navbar">
+        <div class="glass-effect mx-4 mt-4 rounded-2xl px-6 py-4 max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-flash-500 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-flash-500/30">
+                    <i data-lucide="zap" class="w-6 h-6"></i>
+                </div>
+                <span class="font-display font-bold text-2xl text-slate-900">Flash<span class="text-flash-500">Caixa</span></span>
+            </div>
+            
+            <div class="hidden md:flex items-center gap-8">
+                <a href="#beneficios" class="text-sm font-medium text-slate-600 hover:text-flash-600 transition-colors">Benefícios</a>
+                <a href="#solucao" class="text-sm font-medium text-slate-600 hover:text-flash-600 transition-colors">A Solução</a>
+                <a href="#depoimentos" class="text-sm font-medium text-slate-600 hover:text-flash-600 transition-colors">Depoimentos</a>
+                <a href="#contato" class="text-sm font-medium text-slate-600 hover:text-flash-600 transition-colors">Contato</a>
+            </div>
+            
+            <a href="https://wa.me/5562991221913?text=Olá!%20Vim%20pelo%20site%20e%20quero%20transformar%20meu%20negócio%20com%20o%20Flash%20Caixa!" target="_blank" class="hidden md:flex items-center gap-2 bg-flash-500 hover:bg-flash-600 text-white px-6 py-3 rounded-xl font-semibold transition-all hover:scale-105 shadow-lg shadow-flash-500/30">
+                <i data-lucide="message-circle" class="w-5 h-5"></i>
+                Falar no WhatsApp
+            </a>
+            
+            <button class="md:hidden text-slate-600" onclick="document.getElementById('mobileMenu').classList.toggle('hidden')">
+                <i data-lucide="menu" class="w-6 h-6"></i>
+            </button>
+        </div>
+        
+        <!-- Mobile Menu -->
+        <div id="mobileMenu" class="hidden md:hidden glass-effect mx-4 mt-2 rounded-2xl p-6">
+            <div class="flex flex-col gap-4">
+                <a href="#beneficios" class="text-slate-600 font-medium">Benefícios</a>
+                <a href="#solucao" class="text-slate-600 font-medium">A Solução</a>
+                <a href="#depoimentos" class="text-slate-600 font-medium">Depoimentos</a>
+                <a href="#contato" class="text-slate-600 font-medium">Contato</a>
+                <a href="https://wa.me/5562991221913" target="_blank" class="bg-flash-500 text-white px-6 py-3 rounded-xl font-semibold text-center">Falar no WhatsApp</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative min-h-screen flex items-center pt-24 pb-12 overflow-hidden bg-mesh">
+        <!-- Elementos decorativos animados -->
+        <div class="absolute inset-0 overflow-hidden pointer-events-none">
+            <div class="absolute top-20 left-10 w-72 h-72 bg-flash-400/20 rounded-full blur-3xl animate-pulse-slow"></div>
+            <div class="absolute bottom-20 right-10 w-96 h-96 bg-flash-600/10 rounded-full blur-3xl animate-pulse-slow" style="animation-delay: 2s;"></div>
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-flash-500/5 to-transparent rounded-full blur-3xl"></div>
+        </div>
+        
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+                <div class="space-y-8">
+                    <div class="inline-flex items-center gap-2 bg-white/80 backdrop-blur px-4 py-2 rounded-full shadow-sm border border-flash-200 reveal-text">
+                        <span class="flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+                        <span class="text-sm font-semibold text-flash-700">Atendendo em todo Goiás e DF</span>
+                    </div>
+                    
+                    <h1 class="font-display font-bold text-5xl md:text-6xl lg:text-7xl leading-tight text-slate-900 reveal-text">
+                        Controle total do seu <span class="text-gradient">dinheiro</span> sem pagar mensalidade
+                    </h1>
+                    
+                    <p class="text-xl text-slate-600 leading-relaxed max-w-lg reveal-text">
+                        O único sistema de frente de caixa em VBA que elimina a complexidade e coloca <strong class="text-flash-600">R$ 3.600,00 de economia anual</strong> no seu bolso — enquanto você foca no que realmente importa: vender mais.
+                    </p>
+                    
+                    <div class="flex flex-col sm:flex-row gap-4 reveal-text">
+                        <a href="#contato" class="group relative inline-flex items-center justify-center gap-3 bg-flash-500 hover:bg-flash-600 text-white text-lg font-bold px-8 py-4 rounded-2xl transition-all hover:scale-105 shadow-xl shadow-flash-500/30 overflow-hidden">
+                            <span class="relative z-10">Quero Economizar Agora</span>
+                            <i data-lucide="arrow-right" class="w-5 h-5 relative z-10 group-hover:translate-x-1 transition-transform"></i>
+                            <div class="absolute inset-0 bg-gradient-to-r from-flash-400 to-flash-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        </a>
+                        
+                        <a href="https://wa.me/5562991221913?text=Olá!%20Gostaria%20de%20saber%20mais%20sobre%20o%20Flash%20Caixa!" target="_blank" class="inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 text-lg font-semibold px-8 py-4 rounded-2xl border-2 border-slate-200 transition-all hover:border-flash-300 hover:shadow-lg">
+                            <i data-lucide="message-circle" class="w-5 h-5 text-green-500"></i>
+                            Tirar Dúvidas
+                        </a>
+                    </div>
+                    
+                    <!-- Social Proof Imediato -->
+                    <div class="flex items-center gap-4 pt-4 reveal-text">
+                        <div class="flex -space-x-3">
+                            <div class="w-10 h-10 rounded-full bg-flash-100 border-2 border-white flex items-center justify-center text-flash-600 font-bold text-xs">JS</div>
+                            <div class="w-10 h-10 rounded-full bg-flash-200 border-2 border-white flex items-center justify-center text-flash-700 font-bold text-xs">MP</div>
+                            <div class="w-10 h-10 rounded-full bg-flash-300 border-2 border-white flex items-center justify-center text-white font-bold text-xs">+27</div>
+                        </div>
+                        <div class="text-sm text-slate-600">
+                            <strong class="text-slate-900">30+ comércios</strong> já transformaram seus resultados
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Visual do Sistema -->
+                <div class="relative lg:h-[600px] flex items-center justify-center reveal-text">
+                    <div class="relative w-full max-w-md">
+                        <!-- Card principal flutuante -->
+                        <div class="glass-effect rounded-3xl p-6 shadow-2xl animate-float relative z-20">
+                            <div class="flex items-center justify-between mb-6">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-12 h-12 bg-flash-500 rounded-xl flex items-center justify-center text-white">
+                                        <i data-lucide="zap" class="w-6 h-6"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-slate-900">Flash Caixa</div>
+                                        <div class="text-xs text-slate-500">Sistema Ativo</div>
+                                    </div>
+                                </div>
+                                <div class="flex h-3 w-3">
+                                    <span class="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-green-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-4">
+                                <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                                    <div class="text-xs text-slate-500 mb-1">Vendas Hoje</div>
+                                    <div class="text-3xl font-bold text-slate-900">R$ 4.850,00</div>
+                                    <div class="text-xs text-green-600 flex items-center gap-1 mt-1">
+                                        <i data-lucide="trending-up" class="w-3 h-3"></i>
+                                        +23% vs ontem
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="bg-flash-50 rounded-xl p-3 border border-flash-100">
+                                        <div class="text-xs text-flash-600 mb-1">Estoque</div>
+                                        <div class="text-lg font-bold text-flash-700">142 itens</div>
+                                    </div>
+                                    <div class="bg-green-50 rounded-xl p-3 border border-green-100">
+                                        <div class="text-xs text-green-600 mb-1">Clientes</div>
+                                        <div class="text-lg font-bold text-green-700">28 hoje</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex gap-2">
+                                    <button class="flex-1 bg-flash-500 text-white py-3 rounded-xl font-semibold text-sm hover:bg-flash-600 transition-colors">Nova Venda</button>
+                                    <button class="flex-1 bg-slate-100 text-slate-700 py-3 rounded-xl font-semibold text-sm hover:bg-slate-200 transition-colors">Relatório</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Elementos decorativos ao redor -->
+                        <div class="absolute -top-6 -right-6 w-24 h-24 bg-white rounded-2xl shadow-xl flex items-center justify-center animate-float" style="animation-delay: 1s;">
+                            <div class="text-center">
+                                <i data-lucide="shield-check" class="w-8 h-8 text-green-500 mx-auto mb-1"></i>
+                                <div class="text-xs font-bold text-slate-700">100% Seguro</div>
+                            </div>
+                        </div>
+                        
+                        <div class="absolute -bottom-6 -left-6 w-28 h-28 bg-white rounded-2xl shadow-xl flex items-center justify-center animate-float" style="animation-delay: 2s;">
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-flash-600">90</div>
+                                <div class="text-xs text-slate-600">Dias de<br>Suporte</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Scroll Indicator -->
+        <div class="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
+            <i data-lucide="chevron-down" class="w-6 h-6 text-slate-400"></i>
+        </div>
+    </section>
+
+    <!-- Problem/Solution Section (A Dor) -->
+    <section id="solucao" class="py-24 bg-white relative overflow-hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <span class="inline-block text-flash-600 font-semibold text-sm uppercase tracking-wider mb-4">A REALIDADE QUE NINGUÉM CONTA</span>
+                <h2 class="font-display font-bold text-4xl md:text-5xl text-slate-900 mb-6">
+                    Você está <span class="text-red-500">perdendo dinheiro</span> todo mês e nem percebe
+                </h2>
+                <p class="text-xl text-slate-600">
+                    Sistemas tradicionais cobram mensalidades que parecem pequenas, mas somam uma fortuna ao longo do ano.
+                </p>
+            </div>
+            
+            <div class="grid md:grid-cols-2 gap-8 mb-16">
+                <!-- O Problema -->
+                <div class="bg-red-50 rounded-3xl p-8 border-2 border-red-100 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-red-200 rounded-full blur-3xl opacity-50"></div>
+                    <div class="relative z-10">
+                        <div class="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center mb-6">
+                            <i data-lucide="alert-triangle" class="w-7 h-7 text-red-600"></i>
+                        </div>
+                        <h3 class="font-display font-bold text-2xl text-slate-900 mb-4">Com os sistemas tradicionais:</h3>
+                        <ul class="space-y-4">
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="x" class="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0"></i>
+                                <span class="text-slate-700">Mensalidade de R$ 150 a R$ 400 <strong class="text-red-600">(R$ 3.800/ano)</strong></span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="x" class="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0"></i>
+                                <span class="text-slate-700">Taxas escondidas por transação</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="x" class="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0"></i>
+                                <span class="text-slate-700">Contratos de fidelidade de 12 meses</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="x" class="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0"></i>
+                                <span class="text-slate-700">Complexidade que exige treinamento constante</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- A Solução -->
+                <div class="bg-flash-50 rounded-3xl p-8 border-2 border-flash-200 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-flash-300 rounded-full blur-3xl opacity-50"></div>
+                    <div class="relative z-10">
+                        <div class="w-14 h-14 bg-flash-100 rounded-2xl flex items-center justify-center mb-6">
+                            <i data-lucide="check-circle-2" class="w-7 h-7 text-flash-600"></i>
+                        </div>
+                        <h3 class="font-display font-bold text-2xl text-slate-900 mb-4">Com o Flash Caixa:</h3>
+                        <ul class="space-y-4">
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="check" class="w-5 h-5 text-flash-600 mt-0.5 flex-shrink-0"></i>
+                                <span class="text-slate-700"><strong class="text-flash-700">Pagamento único</strong> — investimento que se paga em apenas 1 mês</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="check" class="w-5 h-5 text-flash-600 mt-0.5 flex-shrink-0"></i>
+                                <span class="text-slate-700"><strong class="text-flash-700">Zero mensalidade</strong> para sempre — economia garantida</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="check" class="w-5 h-5 text-flash-600 mt-0.5 flex-shrink-0"></i>
+                                <span class="text-slate-700">Tecnologia VBA robusta e <strong class="text-flash-700">100% offline</strong></span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="check" class="w-5 h-5 text-flash-600 mt-0.5 flex-shrink-0"></i>
+                                <span class="text-slate-700">Suporte gratuito por <strong class="text-flash-700">90 dias</strong> para você dominar tudo</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Cálculo de Economia -->
+            <div class="bg-slate-900 rounded-3xl p-8 md:p-12 text-center relative overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-r from-flash-600/20 to-flash-800/20"></div>
+                <div class="relative z-10">
+                    <h3 class="font-display font-bold text-3xl md:text-4xl text-white mb-4">Economia comprovada em 12 meses</h3>
+                    <div class="flex flex-col md:flex-row items-center justify-center gap-8 mt-8">
+                        <div class="text-center">
+                            <div class="text-5xl md:text-6xl font-bold text-red-400 line-through decoration-4">R$ 3.850</div>
+                            <div class="text-slate-400 mt-2">Sistemas tradicionais</div>
+                        </div>
+                        <i data-lucide="arrow-right" class="w-12 h-12 text-flash-400 hidden md:block"></i>
+                        <i data-lucide="arrow-down" class="w-12 h-12 text-flash-400 md:hidden"></i>
+                        <div class="text-center">
+                            <div class="text-5xl md:text-6xl font-bold text-green-400">R$ 250,00</div>
+                            <div class="text-slate-400 mt-2">Flash Caixa (único)</div>
+                        </div>
+                        <i data-lucide="arrow-right" class="w-12 h-12 text-flash-400 hidden md:block"></i>
+                        <i data-lucide="arrow-down" class="w-12 h-12 text-flash-400 md:hidden"></i>
+                        <div class="text-center bg-green-500/20 rounded-2xl p-6 border border-green-500/30">
+                            <div class="text-4xl md:text-5xl font-bold text-green-400">R$ 3.600</div>
+                            <div class="text-green-300 font-semibold mt-2">ECONOMIA REAL</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Benefits Section -->
+    <section id="beneficios" class="py-24 bg-slate-50 relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <span class="inline-block text-flash-600 font-semibold text-sm uppercase tracking-wider mb-4">POR QUE ESCOLHER O FLASH CAIXA</span>
+                <h2 class="font-display font-bold text-4xl md:text-5xl text-slate-900 mb-6">
+                    Tudo que seu comércio precisa em <span class="text-gradient">um único sistema</span>
+                </h2>
+                <p class="text-xl text-slate-600">
+                    Desenvolvido em VBA com foco em simplicidade máxima e custo zero recorrente.
+                </p>
+            </div>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Card 1 -->
+                <div class="bg-white rounded-3xl p-8 shadow-lg hover-lift card-shine border border-slate-100">
+                    <div class="w-14 h-14 bg-flash-100 rounded-2xl flex items-center justify-center mb-6 text-flash-600">
+                        <i data-lucide="wallet" class="w-7 h-7"></i>
+                    </div>
+                    <h3 class="font-display font-bold text-xl text-slate-900 mb-3">Zero Mensalidade</h3>
+                    <p class="text-slate-600 leading-relaxed">
+                        Pague uma vez e use para sempre. Sem surpresas no cartão, sem contratos longos. Sua margem de lucro agradece.
+                    </p>
+                </div>
+                
+                <!-- Card 2 -->
+                <div class="bg-white rounded-3xl p-8 shadow-lg hover-lift card-shine border border-slate-100">
+                    <div class="w-14 h-14 bg-flash-100 rounded-2xl flex items-center justify-center mb-6 text-flash-600">
+                        <i data-lucide="package" class="w-7 h-7"></i>
+                    </div>
+                    <h3 class="font-display font-bold text-xl text-slate-900 mb-3">Controle de Estoque</h3>
+                    <p class="text-slate-600 leading-relaxed">
+                        Saiba exatamente o que entra e sai. Alertas de reposição automáticos e relatórios de produtos mais vendidos.
+                    </p>
+                </div>
+                
+                <!-- Card 3 -->
+                <div class="bg-white rounded-3xl p-8 shadow-lg hover-lift card-shine border border-slate-100">
+                    <div class="w-14 h-14 bg-flash-100 rounded-2xl flex items-center justify-center mb-6 text-flash-600">
+                        <i data-lucide="pie-chart" class="w-7 h-7"></i>
+                    </div>
+                    <h3 class="font-display font-bold text-xl text-slate-900 mb-3">Relatórios Financeiros</h3>
+                    <p class="text-slate-600 leading-relaxed">
+                        Entradas, saídas, lucro por período e projeções. Visualize a saúde do seu negócio em segundos, não em horas.
+                    </p>
+                </div>
+                
+                <!-- Card 4 -->
+                <div class="bg-white rounded-3xl p-8 shadow-lg hover-lift card-shine border border-slate-100">
+                    <div class="w-14 h-14 bg-flash-100 rounded-2xl flex items-center justify-center mb-6 text-flash-600">
+                        <i data-lucide="headphones" class="w-7 h-7"></i>
+                    </div>
+                    <h3 class="font-display font-bold text-xl text-slate-900 mb-3">Suporte 90 Dias Grátis</h3>
+                    <p class="text-slate-600 leading-relaxed">
+                        Acompanhamento completo para você e sua equipe dominarem o sistema. Suporte humano, não robôs.
+                    </p>
+                </div>
+                
+                <!-- Card 5 -->
+                <div class="bg-white rounded-3xl p-8 shadow-lg hover-lift card-shine border border-slate-100">
+                    <div class="w-14 h-14 bg-flash-100 rounded-2xl flex items-center justify-center mb-6 text-flash-600">
+                        <i data-lucide="zap" class="w-7 h-7"></i>
+                    </div>
+                    <h3 class="font-display font-bold text-xl text-slate-900 mb-3">Implementação Imediata</h3>
+                    <p class="text-slate-600 leading-relaxed">
+                        Instalação em até 24 horas após a contratação. Comece a usar ainda hoje e veja resultados amanhã.
+                    </p>
+                </div>
+                
+                <!-- Card 6 - A "Limitação" como Vantagem -->
+                <div class="bg-gradient-to-br from-flash-500 to-flash-700 rounded-3xl p-8 shadow-lg hover-lift text-white relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                    <div class="relative z-10">
+                        <div class="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-6 backdrop-blur">
+                            <i data-lucide="sparkles" class="w-7 h-7 text-white"></i>
+                        </div>
+                        <h3 class="font-display font-bold text-xl mb-3">Foco no Essencial</h3>
+                        <p class="text-flash-100 leading-relaxed mb-4">
+                            Sem burocracia fiscal complexa. Ideal para pequenos comércios que precisam de agilidade, não de papelada.
+                        </p>
+                        <div class="inline-flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full text-sm font-semibold backdrop-blur">
+                            <i data-lucide="info" class="w-4 h-4"></i>
+                            Não emite NF (venda direta)
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Social Proof Section -->
+    <section id="depoimentos" class="py-24 bg-white relative overflow-hidden">
+        <div class="absolute inset-0 bg-mesh opacity-50"></div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <span class="inline-block text-flash-600 font-semibold text-sm uppercase tracking-wider mb-4">PROVA SOCIAL</span>
+                <h2 class="font-display font-bold text-4xl md:text-5xl text-slate-900 mb-6">
+                    Mais de <span class="text-gradient counter-animation" id="clientCounter">30</span> comércios confiam no Flash Caixa
+                </h2>
+                <p class="text-xl text-slate-600">
+                    Empresários de Goiás e Distrito Federal que transformaram a gestão do dinheiro.
+                </p>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Depoimento 1 -->
+                <div class="bg-slate-50 rounded-3xl p-8 border border-slate-100 hover:shadow-xl transition-shadow">
+                    <div class="flex items-center gap-1 mb-4">
+                        <i data-lucide="star" class="w-5 h-5 text-yellow-400 fill-yellow-400"></i>
+                        <i data-lucide="star" class="w-5 h-5 text-yellow-400 fill-yellow-400"></i>
+                        <i data-lucide="star" class="w-5 h-5 text-yellow-400 fill-yellow-400"></i>
+                        <i data-lucide="star" class="w-5 h-5 text-yellow-400 fill-yellow-400"></i>
+                        <i data-lucide="star" class="w-5 h-5 text-yellow-400 fill-yellow-400"></i>
+                    </div>
+                    <p class="text-slate-700 mb-6 leading-relaxed">
+                        "Eliminamos R$ 280 de mensalidade. No primeiro mês o sistema já se pagou. A interface é simples, minha mãe de 58 anos aprendeu em 1 dia."
+                    </p>
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-flash-200 rounded-full flex items-center justify-center text-flash-700 font-bold">JS</div>
+                        <div>
+                            <div class="font-semibold text-slate-900">João Silva</div>
+                            <div class="text-sm text-slate-500">Mercado em Goiânia</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Depoimento 2 -->
+                <div class="bg-slate-50 rounded-3xl p-8 border border-slate-100 hover:shadow-xl transition-shadow">
+                    <div class="flex items-center gap-1 mb-4">
+                        <i data-lucide="star" class="w-5 h-5 text-yellow-400 fill-yellow-400"></i>
+                        <i data-lucide="star" class="w-5 h-5 text-yellow-400 fill-yellow-400"></i>
+                        <i data-lucide="star" class="w-5 h-5 text-yellow-400 fill-yellow-400"></i>
+                        <i data-lucide="star" class="w-5 h-5 text-yellow-400 fill-yellow-400"></i>
+                        <i data-lucide="star" class="w-5 h-5 text-yellow-400 fill-yellow-400"></i>
+                    </div>
+                    <p class="text-slate-700 mb-6 leading-relaxed">
+                        "O controle de estoque mudou nosso negócio. Antes perdíamos produtos, agora sabemos exatamente o que temos. Suporte excelente!"
+                    </p>
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-flash-200 rounded-full flex items-center justify-center text-flash-700 font-bold">MP</div>
+                        <div>
+                            <div class="font-semibold text-slate-900">Maria Pereira</div>
+                            <div class="text-sm text-slate-500">Loja de Roupas - DF</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Depoimento 3 -->
+                <div class="bg-slate-50 rounded-3xl p-8 border border-slate-100 hover:shadow-xl transition-shadow">
+                    <div class="flex items-center gap-1 mb-4">
+                        <i data-lucide="star" class="w-5 h-5 text-yellow-400 fill-yellow-400"></i>
+                        <i data-lucide="star" class="w-5 h-5 text-yellow-400 fill-yellow-400"></i>
+                        <i data-lucide="star" class="w-5 h-5 text-yellow-400 fill-yellow-400"></i>
+                        <i data-lucide="star" class="w-5 h-5 text-yellow-400 fill-yellow-400"></i>
+                        <i data-lucide="star" class="w-5 h-5 text-yellow-400 fill-yellow-400"></i>
+                    </div>
+                    <p class="text-slate-700 mb-6 leading-relaxed">
+                        "Funciona 100% offline. Quando a internet cai, meus concorrentes param, eu continuo vendendo. Isso é liberdade."
+                    </p>
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-flash-200 rounded-full flex items-center justify-center text-flash-700 font-bold">AC</div>
+                        <div>
+                            <div class="font-semibold text-slate-900">Antônio Carlos</div>
+                            <div class="text-sm text-slate-500">Padaria - Valparaíso</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mt-16">
+                <div class="text-center">
+                    <div class="text-4xl font-bold text-flash-600 mb-2">100%</div>
+                    <div class="text-slate-600">Clientes Satisfeitos</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-4xl font-bold text-flash-600 mb-2">24h</div>
+                    <div class="text-slate-600">Implementação</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-4xl font-bold text-flash-600 mb-2">90</div>
+                    <div class="text-slate-600">Dias de Suporte</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-4xl font-bold text-flash-600 mb-2">R$ 3.6k</div>
+                    <div class="text-slate-600">Economia/Ano</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Cobertura Section -->
+    <section class="py-24 bg-flash-600 relative overflow-hidden">
+        <div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.05\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20"></div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="grid md:grid-cols-2 gap-12 items-center">
+                <div>
+                    <h2 class="font-display font-bold text-4xl md:text-5xl text-white mb-6">
+                        Atendimento em todo <span class="text-flash-200">Goiás</span> e <span class="text-flash-200">Distrito Federal</span>
+                    </h2>
+                    <p class="text-xl text-flash-100 mb-8">
+                        Presença local com suporte humano. Não somos uma empresa de São Paulo atendendo remotamente — estamos aqui, na sua região.
+                    </p>
+                    
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-4 bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/20">
+                            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                                <i data-lucide="map-pin" class="w-6 h-6 text-white"></i>
+                            </div>
+                            <div>
+                                <div class="font-semibold text-white">Goiânia e Região Metropolitana</div>
+                                <div class="text-flash-200 text-sm">Atendimento presencial disponível</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center gap-4 bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/20">
+                            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                                <i data-lucide="map-pin" class="w-6 h-6 text-white"></i>
+                            </div>
+                            <div>
+                                <div class="font-semibold text-white">Interior de Goiás</div>
+                                <div class="text-flash-200 text-sm">Visita técnica disponível</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center gap-4 bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/20">
+                            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                                <i data-lucide="map-pin" class="w-6 h-6 text-white"></i>
+                            </div>
+                            <div>
+                                <div class="font-semibold text-white">Brasília e Entorno</div>
+                                <div class="text-flash-200 text-sm">Visita técnica disponível</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-3xl p-8 shadow-2xl">
+                    <h3 class="font-display font-bold text-2xl text-slate-900 mb-6">Horário de Atendimento</h3>
+                    
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center py-3 border-b border-slate-100">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="calendar" class="w-5 h-5 text-flash-500"></i>
+                                <span class="font-medium text-slate-700">Segunda a Sexta</span>
+                            </div>
+                            <span class="font-bold text-slate-900">07:00 às 21:00</span>
+                        </div>
+                        
+                        <div class="flex justify-between items-center py-3 border-b border-slate-100">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="calendar" class="w-5 h-5 text-flash-500"></i>
+                                <span class="font-medium text-slate-700">Sábado e Domingo</span>
+                            </div>
+                            <span class="font-bold text-slate-900">08:00 às 18:00</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 p-4 bg-flash-50 rounded-xl border border-flash-100">
+                        <div class="flex items-start gap-3">
+                            <i data-lucide="clock" class="w-5 h-5 text-flash-600 mt-0.5"></i>
+                            <div class="text-sm text-slate-600">
+                                <strong class="text-slate-900">Suporte emergencial:</strong> Atendimento fora do horário comercial para casos críticos durante os primeiros 30 dias.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-24 bg-slate-900 relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-br from-flash-900/50 to-slate-900"></div>
+        <div class="absolute top-0 left-0 w-full h-full overflow-hidden">
+            <div class="absolute top-1/4 left-1/4 w-64 h-64 bg-flash-500/20 rounded-full blur-3xl animate-pulse-slow"></div>
+            <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-flash-600/10 rounded-full blur-3xl animate-pulse-slow" style="animation-delay: 1s;"></div>
+        </div>
+        
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+            <h2 class="font-display font-bold text-4xl md:text-5xl lg:text-6xl text-white mb-6">
+                Pare de pagar mensalidade <span class="text-flash-400">hoje mesmo</span>
+            </h2>
+            <p class="text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
+                Junte-se aos 30+ comerciantes que já descobriram uma forma mais inteligente de gerenciar o dinheiro do negócio.
+            </p>
+            
+            <div class="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+                <a href="https://wa.me/5562991221913?text=Olá!%20Quero%20solicitar%20um%20orçamento%20para%20o%20Flash%20Caixa!" target="_blank" class="inline-flex items-center justify-center gap-3 bg-flash-500 hover:bg-flash-400 text-white text-lg font-bold px-10 py-5 rounded-2xl transition-all hover:scale-105 shadow-2xl shadow-flash-500/50">
+                    <i data-lucide="zap" class="w-6 h-6"></i>
+                    Quero Economizar Agora
+                </a>
+            </div>
+            
+            <div class="flex items-center justify-center gap-6 text-slate-400 text-sm">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="check-circle" class="w-4 h-4 text-green-400"></i>
+                    <span>Implementação em 24h</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <i data-lucide="check-circle" class="w-4 h-4 text-green-400"></i>
+                    <span>Suporte 90 dias grátis</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <i data-lucide="check-circle" class="w-4 h-4 text-green-400"></i>
+                    <span>Satisfação garantida</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Form Section -->
+    <section id="contato" class="py-24 bg-white relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid lg:grid-cols-2 gap-16 items-start">
+                <div>
+                    <span class="inline-block text-flash-600 font-semibold text-sm uppercase tracking-wider mb-4">SOLICITE SEU ORÇAMENTO</span>
+                    <h2 class="font-display font-bold text-4xl md:text-5xl text-slate-900 mb-6">
+                        Fale diretamente conosco pelo WhatsApp
+                    </h2>
+                    <p class="text-xl text-slate-600 mb-8">
+                        Preencha o formulário abaixo ou clique no botão flutuante. Respondemos em minutos durante o horário comercial.
+                    </p>
+                    
+                    <div class="space-y-6">
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 bg-flash-100 rounded-xl flex items-center justify-center text-flash-600 flex-shrink-0">
+                                <i data-lucide="message-circle" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <div class="font-semibold text-slate-900 mb-1">WhatsApp Direto</div>
+                                <div class="text-slate-600">(62) 99122-1913</div>
+                                <div class="text-sm text-green-600 flex items-center gap-1 mt-1">
+                                    <span class="relative flex h-2 w-2">
+                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                    </span>
+                                    Online agora
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 bg-flash-100 rounded-xl flex items-center justify-center text-flash-600 flex-shrink-0">
+                                <i data-lucide="clock" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <div class="font-semibold text-slate-900 mb-1">Resposta Garantida</div>
+                                <div class="text-slate-600">Em até 30 minutos em horário comercial</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Form -->
+                <div class="bg-slate-50 rounded-3xl p-8 border border-slate-200 shadow-xl">
+                    <form id="contactForm" class="space-y-6" onsubmit="handleSubmit(event)">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Seu Nome</label>
+                            <input type="text" id="nome" required class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-flash-500 focus:ring-2 focus:ring-flash-200 outline-none transition-all" placeholder="Como podemos te chamar?">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">E-mail</label>
+                            <input type="email" id="email" required class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-flash-500 focus:ring-2 focus:ring-flash-200 outline-none transition-all" placeholder="seu@email.com">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Tipo de Comércio</label>
+                            <select id="tipo" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-flash-500 focus:ring-2 focus:ring-flash-200 outline-none transition-all bg-white">
+                                <option value="">Selecione...</option>
+                                <option value="mercado">Mercado/Mini Mercado</option>
+                                <option value="loja">Loja de Roupas/Acessórios</option>
+                                <option value="alimentacao">Restaurante/Lanchonete</option>
+                                <option value="padaria">Padaria</option>
+                                <option value="outro">Outro</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Mensagem</label>
+                            <textarea id="mensagem" rows="4" required class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-flash-500 focus:ring-2 focus:ring-flash-200 outline-none transition-all resize-none" placeholder="Conte-nos sobre seu negócio e como podemos ajudar..."></textarea>
+                        </div>
+                        
+                        <button type="submit" class="w-full bg-flash-500 hover:bg-flash-600 text-white font-bold py-4 rounded-xl transition-all hover:scale-[1.02] shadow-lg shadow-flash-500/30 flex items-center justify-center gap-2">
+                            <i data-lucide="send" class="w-5 h-5"></i>
+                            Enviar para WhatsApp
+                        </button>
+                        
+                        <p class="text-xs text-slate-500 text-center">
+                            Ao enviar, você será redirecionado para o WhatsApp com sua mensagem pré-preenchida.
+                        </p>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-300 py-12 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid md:grid-cols-4 gap-8 mb-8">
+                <div class="col-span-2">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 bg-flash-500 rounded-xl flex items-center justify-center text-white">
+                            <i data-lucide="zap" class="w-6 h-6"></i>
+                        </div>
+                        <span class="font-display font-bold text-2xl text-white">Flash<span class="text-flash-500">Caixa</span></span>
+                    </div>
+                    <p class="text-slate-400 mb-4 max-w-sm">
+                        Sistema de frente de caixa em VBA para pequenos comércios. Economia real, controle total, complexidade zero.
+                    </p>
+                    <div class="flex items-center gap-4">
+                        <a href="https://wa.me/5562991221913" target="_blank" class="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center hover:bg-flash-600 transition-colors">
+                            <i data-lucide="message-circle" class="w-5 h-5"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold text-white mb-4">Links Rápidos</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#beneficios" class="hover:text-flash-400 transition-colors">Benefícios</a></li>
+                        <li><a href="#solucao" class="hover:text-flash-400 transition-colors">Como Funciona</a></li>
+                        <li><a href="#depoimentos" class="hover:text-flash-400 transition-colors">Depoimentos</a></li>
+                        <li><a href="#contato" class="hover:text-flash-400 transition-colors">Contato</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold text-white mb-4">Contato</h4>
+                    <ul class="space-y-2">
+                        <li class="flex items-center gap-2">
+                            <i data-lucide="phone" class="w-4 h-4 text-flash-500"></i>
+                            <span>(62) 99122-1913</span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <i data-lucide="map-pin" class="w-4 h-4 text-flash-500"></i>
+                            <span>Goiás e Distrito Federal</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="border-t border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="text-sm text-slate-500">
+                    © 2024 Flash Caixa. Todos os direitos reservados.
+                </div>
+                
+                <!-- Crédito do Criador -->
+                <div class="flex items-center gap-2 text-sm">
+                    <span class="text-slate-500">Criado por</span>
+                    <a href="https://wa.me/5561992560713?text=Olá!%20Vim%20através%20do%20site%20Flash%20Caixa%20e%20gostaria%20de%20discutir%20uma%20solução%20digital%20para%20minha%20empresa.%20Poderia%20me%20ajudar?" target="_blank" class="font-semibold text-flash-400 hover:text-flash-300 transition-colors flex items-center gap-1">
+                        Emanuel Araújo
+                        <i data-lucide="external-link" class="w-3 h-3"></i>
+                    </a>
+                    <span class="text-slate-600">•</span>
+                    <a href="https://wa.me/5561992560713?text=Olá!%20Vim%20através%20do%20site%20Flash%20Caixa%20e%20gostaria%20de%20discutir%20uma%20solução%20digital%20para%20minha%20empresa.%20Poderia%20me%20ajudar?" target="_blank" class="text-slate-400 hover:text-white transition-colors text-xs">
+                        entre em contato
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- WhatsApp Floating Button -->
+    <a href="https://wa.me/5562991221913?text=Olá!%20Vim%20pelo%20site%20e%20quero%20saber%20mais%20sobre%20o%20Flash%20Caixa!" target="_blank" class="fixed bottom-6 right-6 z-50 group">
+        <div class="absolute inset-0 bg-green-500 rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity animate-pulse"></div>
+        <div class="relative bg-green-500 hover:bg-green-600 text-white p-4 rounded-full shadow-2xl transition-all hover:scale-110 flex items-center gap-3 pr-6">
+            <i data-lucide="message-circle" class="w-8 h-8"></i>
+            <span class="font-semibold hidden group-hover:inline-block whitespace-nowrap">Fale Conosco</span>
+        </div>
+        
+        <!-- Badge de "Online" -->
+        <div class="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white flex items-center justify-center">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+        </div>
+    </a>
+
+    <!-- Scripts -->
+    <script>
+        // Inicializar ícones Lucide
+        lucide.createIcons();
+        
+        // GSAP ScrollTrigger
+        gsap.registerPlugin(ScrollTrigger);
+        
+        // Animações de revelação
+        gsap.utils.toArray('.reveal-text').forEach((element, i) => {
+            gsap.to(element, {
+                scrollTrigger: {
+                    trigger: element,
+                    start: "top 85%",
+                    toggleActions: "play none none reverse"
+                },
+                opacity: 1,
+                y: 0,
+                duration: 0.8,
+                delay: i * 0.1,
+                ease: "power3.out"
+            });
+        });
+        
+        // Animação do contador
+        ScrollTrigger.create({
+            trigger: "#clientCounter",
+            start: "top 80%",
+            onEnter: () => {
+                let obj = document.getElementById("clientCounter");
+                let end = 30;
+                let start = 0;
+                let duration = 2000;
+                let startTime = null;
+                
+                function animate(currentTime) {
+                    if (!startTime) startTime = currentTime;
+                    let progress = currentTime - startTime;
+                    let val = Math.easeInOutQuad(progress, start, end - start, duration);
+                    obj.innerHTML = Math.floor(val) + "+";
+                    if (progress < duration) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        obj.innerHTML = "30+";
+                    }
+                }
+                
+                Math.easeInOutQuad = function (t, b, c, d) {
+                    t /= d/2;
+                    if (t < 1) return c/2*t*t + b;
+                    t--;
+                    return -c/2 * (t*(t-2) - 1) + b;
+                };
+                
+                requestAnimationFrame(animate);
+            },
+            once: true
+        });
+        
+        // Progress Bar
+        window.addEventListener('scroll', () => {
+            let winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            let height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            let scrolled = (winScroll / height) * 100;
+            document.getElementById("progressBar").style.width = scrolled + "%";
+            
+            // Navbar glass effect
+            const navbar = document.getElementById('navbar');
+            if (winScroll > 50) {
+                navbar.classList.add('shadow-lg');
+            } else {
+                navbar.classList.remove('shadow-lg');
+            }
+        });
+        
+        // Form Handler
+        function handleSubmit(e) {
+            e.preventDefault();
+            
+            const nome = document.getElementById('nome').value;
+            const email = document.getElementById('email').value;
+            const tipo = document.getElementById('tipo').value;
+            const mensagem = document.getElementById('mensagem').value;
+            
+            const tipoText = {
+                'mercado': 'Mercado/Mini Mercado',
+                'loja': 'Loja de Roupas',
+                'alimentacao': 'Restaurante',
+                'padaria': 'Padaria',
+                'outro': 'Outro'
+            };
+            
+            const text = `Olá! Meu nome é ${nome}.\n\nEmail: ${email}\nTipo de comércio: ${tipoText[tipo] || 'Não informado'}\n\nMensagem: ${mensagem}\n\nGostaria de solicitar um orçamento para o Flash Caixa.`;
+            
+            const encodedText = encodeURIComponent(text);
+            const whatsappUrl = `https://wa.me/5562991221913?text=${encodedText}`;
+            
+            window.open(whatsappUrl, '_blank');
+        }
+        
+        // Smooth scroll para links internos
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
